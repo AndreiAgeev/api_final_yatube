@@ -7,9 +7,9 @@ from rest_framework.viewsets import (GenericViewSet,
                                      ModelViewSet,
                                      ReadOnlyModelViewSet)
 
-from . import excpetions, serializers
+from . import serializers
 from .permissions import AuthorOrReadOnly
-from posts.models import Follow, Group, Post, User
+from posts.models import Group, Post
 
 
 class PostViewSet(ModelViewSet):
@@ -52,21 +52,9 @@ class FollowViewSet(CreateModelMixin, ListModelMixin, GenericViewSet):
     filter_backends = (SearchFilter,)
     search_fields = ('following__username',)
 
-    def perform_checks(self, user, follow_user):
-        if follow_user == user:
-            raise excpetions.FollowMyselfError
-        if Follow.objects.filter(user=user, following=follow_user):
-            raise excpetions.FollowTwiceError
-
     def get_queryset(self):
-        return Follow.objects.filter(user=self.request.user)
+        user = self.request.user
+        return user.follow.all()
 
     def perform_create(self, serializer):
-        user = self.request.user
-        follow_username = serializer.validated_data.get('following')
-        follow_user = get_object_or_404(User, username=follow_username)
-        self.perform_checks(user, follow_user)
-        serializer.save(
-            user=user,
-            following=follow_user
-        )
+        serializer.save(user=self.request.user)
